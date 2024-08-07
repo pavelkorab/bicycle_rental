@@ -1,0 +1,196 @@
+Структура проекта
+
+bike_rental/
+bike_rental/
+__init__.py
+settings.py
+urls.py
+wsgi.py
+asgi.py
+core/
+__init__.py
+models.py
+views.py
+serializers.py
+tasks.py
+users/
+__init__.py
+models.py
+views.py
+serializers.py
+bikes/
+__init__.py
+models.py
+views.py
+serializers.py
+rentals/
+__init__.py
+models.py
+views.py
+serializers.py
+tests/
+__init__.py
+test_core.py
+test_users.py
+test_bikes.py
+test_rentals.py
+requirements.txt
+docker-compose.yml
+Dockerfile
+.gitlab-ci.yml
+README.md
+
+Модели
+
+core/models.py
+
+from django.db import models
+
+class Bike(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    status = models.CharField(max_length=255, choices=['available', 'ented'])
+
+class Rental(models.Model):
+    bike = models.ForeignKey(Bike, on_delete=models.CASCADE)
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField(null=True, blank=True)
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+users/models.py
+
+from django.contrib.auth.models import AbstractUser
+
+class User(AbstractUser):
+    email = models.EmailField(unique=True)
+
+API
+
+core/views.py
+
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from.models import Bike
+from.serializers import BikeSerializer
+
+class BikeList(APIView):
+    def get(self, request):
+        bikes = Bike.objects.all()
+        serializer = BikeSerializer(bikes, many=True)
+        return Response(serializer.data)
+
+core/serializers.py
+
+from rest_framework import serializers
+from.models import Bike
+
+class BikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bike
+        fields = ['id', 'name', 'description', 'tatus']
+
+Асинхронные задачи
+
+core/tasks.py
+
+from celery import shared_task
+from.models import Rental
+
+@shared_task
+def calculate_rental_cost(rental_id):
+    rental = Rental.objects.get(id=rental_id)
+    # calculate cost here
+    rental.cost = cost
+    rental.save()
+
+Тестирование
+
+tests/test_core.py
+
+from django.test import TestCase
+from.models import Bike
+
+class BikeTestCase(TestCase):
+    def test_bike_creation(self):
+        bike = Bike.objects.create(name='Test Bike', description='Test description')
+        self.assertEqual(bike.name, 'Test Bike')
+
+Docker
+
+docker-compose.yml
+
+version: '3'
+
+services:
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_DB=bike_rental
+      - POSTGRES_USER=bike_rental
+      - POSTGRES_PASSWORD=bike_rental
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  app:
+    build:.
+    environment:
+      - DJANGO_SETTINGS_MODULE=bike_rental.settings
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+volumes:
+  db-data:
+
+CI/CD
+
+.gitlab-ci.yml
+
+image: docker:latest
+
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_IMAGE: $CI_PROJECT_NAME
+
+build:
+  stage: build
+  script:
+    - docker build -t $DOCKER_IMAGE.
+  artifacts:
+    paths:
+      - $DOCKER_IMAGE.tar
+
+test:
+  stage: test
+  script:
+    - docker run -t $DOCKER_IMAGE python manage.py test
+
+deploy:
+  stage: deploy
+  script:
+    - docker run -d -p 8000:8000 $DOCKER_IMAGE
+  environment:
+    name: production
+  only:
+    - main
+
+Это базовая структура проекта. Вам нужно будет дополнить код и настроить все компоненты. Также, вам нужно будет создать инструкции по развертыванию и локальному запуску проекта.
+
+Примеры запросов для тестирования API:
+
+GET /bikes/ - получить список всех велосипедов
+POST /bikes/ - создать новый велосипед
+GET /bikes/{id}/ - получить информацию о велосипеде
+PUT /bikes/{id}/ - обновить информацию о велосипеде
+DELETE /bikes/{id}/ - удалить велосипед
+POST /rentals/ - арендовать велосипед
+GET /rentals/ - получить список всех аренд
+GET /rentals/{id}/ - получить информацию об аренде
+PUT /rentals/{id}/ - обновить информацию об аренде
+DELETE /rentals/{id}/ - удалить аренду
